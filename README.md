@@ -166,7 +166,7 @@ You also need to create a client in your UAA server for harbor:
 . ../envs/cicd/envs.sh
 uaac client add ${HARBOR_UAA_CLIENT_ID} --scope openid \
   --authorized_grant_types client_credentials,password,refresh_token \
-  --redirect_uri 'https://${HARBOR_DNS}  https://${HARBOR_DNS}/*' \
+  --redirect_uri "https://${HARBOR_DNS}  https://${HARBOR_DNS}/*" \
   --secret "${HARBOR_UAA_CLIENT_SECRET}" \
   --authorities clients.read,clients.secret,uaa.resource,scim.write,openid,scim.read
 ```
