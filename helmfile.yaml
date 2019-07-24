@@ -112,7 +112,7 @@ releases:
             disableredirect: false
             type: gcs
             gcs:
-              bucket: cluster1-harbor
+              bucket: {{ requiredEnv "HARBOR_GCS_BUCKET" }}
               encodedkey: {{ exec "/bin/cat" (list (requiredEnv "GOOGLE_APPLICATION_CREDENTIALS")) | b64enc }}
         imagePullPolicy: Always
         logLevel: info
