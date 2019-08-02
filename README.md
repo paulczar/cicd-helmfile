@@ -39,7 +39,7 @@ wait for cluster to be ready...
 
 ```bash
 . ../envs/cicd/envs.sh
-
+./scripts/configure-lb.sh
 ```
 
 Set up DNS for the created LB to your external hostname used above.
@@ -149,7 +149,7 @@ Harbor will autogenerate certificates for notary, but it will regenerate them ev
 
 ```bash
 kubectl create namespace harbor
-kubectl -n harbor apply -f ./resources/harbor/notary-certs-secret.yaml
+kubectl -n harbor apply -f ./envs/cicd/harbor/notary-certs-secret.yaml
 ```
 
 Harbor also needs your UAA server's CA Cert. You can create a secret for it like so:
@@ -166,7 +166,7 @@ You also need to create a client in your UAA server for harbor:
 . ../envs/cicd/envs.sh
 uaac client add ${HARBOR_UAA_CLIENT_ID} --scope openid \
   --authorized_grant_types client_credentials,password,refresh_token \
-  --redirect_uri 'https://${HARBOR_URL}  https://${HARBOR_URL}/*' \
+  --redirect_uri "https://${HARBOR_DNS}  https://${HARBOR_DNS}/*" \
   --secret "${HARBOR_UAA_CLIENT_SECRET}" \
   --authorities clients.read,clients.secret,uaa.resource,scim.write,openid,scim.read
 ```
@@ -180,6 +180,7 @@ kubectl create namespace spinnaker
 ```
 
 In order for Spinnaker to trust UAA's CA CERT we need to construct a new java cert store that includes our UAA cert:
+Note: If you're on a Mac, you'll need to run replace `/etc/ssl/certs/java/cacerts` with `$(/usr/libexec/java_home)/lib/security/cacerts`
 
 ```bash
 . ./envs/cicd/envs.sh
