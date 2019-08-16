@@ -45,6 +45,7 @@ releases:
           serviceAccountSecret: {{ requiredEnv "EXTERNAL_DNS_SECRET"}}
         domainFilters:
           - {{ requiredEnv "EXTERNAL_DNS_DOMAIN" }}
+        txtOwnerId: "cicd"
         resources:
           limits:
             memory: 50Mi
@@ -152,7 +153,7 @@ releases:
   - name: concourse
     namespace: concourse
     chart: stable/concourse
-    version: 6.2.2
+    version: 8.1.0
     values:
       - nameOverride: concourse
         fullnameOverride: concourse
@@ -166,7 +167,7 @@ releases:
               oidc:
                 enabled: true
                 displayName: "PKS Auth"
-                issuer: {{ requiredEnv "UAA_URL" }}/oauth/token #
+                issuer: {{ requiredEnv "UAA_URL" }}/oauth/token
                 useCaCert: true
                 scope: "openid,roles,uaa.user"
                 userNameKey: user_name
