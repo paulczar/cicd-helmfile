@@ -11,12 +11,14 @@ spec:
     http01: {}
     dns01:
       providers:
-      - name: staging-clouddns
-        clouddns:
-          project: GOOGLE_PROJECT_ID
-          serviceAccountSecretRef:
-            name: gcp-lb-tags
-            key: credentials.json
+      - name: staging-route53
+        route53:
+          region: us-east-1
+          accessKeyID: AKIAIOSFODNN7EXAMPLE
+          secretAccessKeySecretRef:
+            name: route53-credentials-secret
+            key: secret-access-key
+
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: ClusterIssuer
@@ -31,9 +33,11 @@ spec:
     http01: {}
     dns01:
       providers:
-      - name: prod-clouddns
-        clouddns:
-          project: GOOGLE_PROJECT_ID
-          serviceAccountSecretRef:
-            name: gcp-lb-tags
-            key: credentials.json
+      - name: prod-route53
+        route53:
+          region: us-east-1
+          accessKeyID: AKIAIOSFODNN7EXAMPLE
+          secretAccessKeySecretRef:
+            name: route53-credentials-secret
+            key: secret-access-key
+

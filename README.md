@@ -22,40 +22,13 @@ It's expected that you already have the basic Kubernetes client tools like `kube
 
 ### Create PKS Kubernetes Cluster
 
-> Note: If you're not using PKS you can skip this section. You'll also want to comment out the first `release` in [Helmfile](Helmfile) which is specific for PKS on GCP.
+> Note: this assumes you already have a PKS cluster running with dns and is accesible via kubectl.
 
-Use PKS to create cluster
-
-```bash
-pks create-cluster cicd --external-hostname cicd.pivlab.gcp.paulczar.wtf --plan small
-```
-
-wait for cluster to be ready...
-
-### Fill out envs.sh
-
-
-### Load env and create LB
-
-```bash
-. ../envs/cicd/envs.sh
-./scripts/configure-lb.sh
-```
-
-Set up DNS for the created LB to your external hostname used above.
-
-```bash
-gcloud dns record-sets transaction start --zone pivlab
-gcloud dns record-sets transaction add "35.184.76.238" \
-      --name cicd.pivlab.gcp.paulczar.wtf. --ttl 300 \
-      --type A --zone pivlab
-gcloud dns record-sets transaction execute --zone pivlab
-```
 
 ### Load up your PKS kubernetes creds
 
 ```bash
-pks get-credentials cicd
+pks get-credentials <your-cluster>
 ```
 
 ensure kubectl is working
@@ -98,13 +71,19 @@ Server: &version.Version{SemVer:"v2.14.0", GitCommit:"05811b84a3f93603dd6c2fcfe5
 ```
 
 ## Configuration
+Copy `envs/cicd-template/` to `envs/cicd` this will be ignored by git since it will contain secrets
 
 Poke through `envs/cicd/envs.sh` it should be pretty obvious what you need to set.
-Ideally you'll copy this directory somewhere and modify and use it outside the scope of this git repository.
 
-### Configure gcp-lb-tags
+### Create s3 buckets
 
-Not really anything to do here, defaults should be fine, just ensure envs.sh has correct cluster details and gcp auth.
+create a bucket matching the names you updated for `HARBOR_S3_BUCKET` and `SPINNAKER_S3_BUCKET` in the env.sh
+
+### Default SC
+
+make sure you have a default storage class set 
+
+`kubectl apply -f ./resources/storageclass.yml`
 
 ### Configure ingress
 
@@ -112,7 +91,7 @@ Not really anything to do here, defaults should be fine.
 
 ### Configure cert-manager
 
-Edit the file `../envs/cicd/cert-manager/cluster-issuer.yaml` and change the email address and project for both Issuers. The rest should be okay.
+Edit the file `../envs/cicd/cert-manager/cluster-issuer.yaml` and change the email address and access key for both Issuers.
 
 Create a namespace for cert-manager to run in:
 
@@ -120,22 +99,30 @@ Create a namespace for cert-manager to run in:
 kubectl create namespace cluster-system
 ```
 
+create the secret for the cert manager to use. 
+```bash
+kubectl -n cluster-system create secret generic route53-credentials-secret \
+    --from-literal="secret-access-key=${AWS_SECRET_KEY}"
+```
+
 Apply the CRDs for cert-manager:
 
 ```bash
-./resources/cert-manager/crds.yaml
+kubectl apply -f ./resources/cert-manager/crds.yaml
 ```
 
 Create the cluster issuer:
 
 ```bash
-kubectl ./envs/cicd/cert-manager/cluster-issuer.yaml
+kubectl apply -f ./envs/cicd/cert-manager/cluster-issuer.yaml
 ```
 
 ### Concourse
 
 ```bash
 . ./envs/cicd/envs.sh
+uaac target $UAA_URL --skip-ssl-validation
+uaac token client get admin -s "$UAA_ADMIN_PASS"
 uaac client add ${CONCOURSE_OIDC_CLIENT_ID} --scope openid,roles,uaa.user \
   --authorized_grant_types refresh_token,password,authorization_code \
   --redirect_uri "https://${CONCOURSE_DNS}/sky/issuer/callback" \
@@ -180,7 +167,7 @@ kubectl create namespace spinnaker
 ```
 
 In order for Spinnaker to trust UAA's CA CERT we need to construct a new java cert store that includes our UAA cert:
-Note: If you're on a Mac, you'll need to run replace `/etc/ssl/certs/java/cacerts` with `$(/usr/libexec/java_home)/lib/security/cacerts`
+Note: If you're on a Mac, you'll need to run replace `/etc/ssl/certs/java/cacerts` with `$(/usr/libexec/java_home)/jre/lib/security/cacerts`
 
 ```bash
 . ./envs/cicd/envs.sh
@@ -212,24 +199,32 @@ kubectl -n spinnaker create secret generic \
   --from-literal="oauth2_client_secret=${SPINNAKER_UAA_CLIENT_SECRET}"
 ```
 
-Create a secret from a google service account JSON file that has GCS access:
-
-```bash
-. ./envs/cicd/envs.sh
-kubectl -n spinnaker create secret generic gcs-creds \
-  --from-file="key.json=${SPINNAKER_GCS_AUTH_FILE}"
-```
-
 Create a secret for your registry auth:
 
 ```bash
 . ./envs/cicd/envs.sh
 kubectl -n spinnaker create secret generic registry-secret \
-    --from-literal="dockerhub=${SPINNAKER_REGISTRY_PASSWORD}"
+    --from-literal="harbor=${SPINNAKER_REGISTRY_PASSWORD}"
 ```
+### create a UAA user
+
+create a user in uaa
+
+`uaac user add username -p 'pass' --emails email`
+
+> Note: you will need to add items to the spinnkaer values for the images you want to make available to spinnaker after you deploy them. 
 
 ## Install that shizzle
 
 ```bash
 helmfile apply
 ```
+
+###enable UAA auth in harbor
+
+```bash
+curl -i -X PUT -u "admin:${HARBOR_ADMIN_PASSWORD}" \                                                                               ✔  13212  12:31:21
+  -H "Content-Type: application/json" \
+  https://${HARBOR_DNS}/api/configurations \
+  -d '{"auth_mode":"uaa_auth","self_registration":"false","uaa_client_id":"harbor-cicd","uaa_client_secret":"'${HARBOR_UAA_CLIENT_SECRET}'","uaa_endpoint":"'${UAA_URL}'","uaa_verify_cert":"false"}'
+  ```

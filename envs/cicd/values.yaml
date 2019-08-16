@@ -1,6 +1,0 @@
-google:
-  projectID: pgtm-pczarkowski
-
-externalDNS:
-  domainFilters: ["pivlab.gcp.paulczar.wtf"]
-  serviceAccountSecret: "gcp-lb-tags"

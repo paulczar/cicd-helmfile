@@ -25,12 +25,11 @@ redis:
 minio:
   enabled: false
 
-# GCS is used to store artifacts
-gcs:
+s3:
   enabled: true
-  secretName: gcs-creds
-  project: {{ requiredEnv "SPINNAKER_GCS_PROJECT" }}
-  bucket: {{ requiredEnv "SPINNAKER_GCS_BUCKET"}}
+  bucket: {{ requiredEnv "SPINNAKER_S3_BUCKET"}}
+  accessKey: {{ requiredEnv "AWS_ACCESS_KEY"}}
+  secretKey: {{ requiredEnv "AWS_SECRET_KEY"}}
 
 halyard:
   spinnakerVersion: 1.14.4
