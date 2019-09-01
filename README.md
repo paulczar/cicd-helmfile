@@ -37,6 +37,8 @@ wait for cluster to be ready...
 
 ### Load env and create LB
 
+The `configure-lb.sh` script uses a binary called `gcp-lb-tags`. To build the binary, clone [gcp-lb-tags](https://github.com/paulczar/gcp-lb-tags) and run `go build`. Move the resulting `gcp-lb-tags` binary to this directory, or add it to your PATH.
+
 ```bash
 . ../envs/cicd/envs.sh
 ./scripts/configure-lb.sh
@@ -180,7 +182,7 @@ kubectl create namespace spinnaker
 ```
 
 In order for Spinnaker to trust UAA's CA CERT we need to construct a new java cert store that includes our UAA cert:
-Note: If you're on a Mac, you'll need to run replace `/etc/ssl/certs/java/cacerts` with `$(/usr/libexec/java_home)/lib/security/cacerts`
+Note: If you're on a Mac, you'll need to run replace `/etc/ssl/certs/java/cacerts` with `$(/usr/libexec/java_home)/jre/lib/security/cacerts`
 
 ```bash
 . ./envs/cicd/envs.sh
